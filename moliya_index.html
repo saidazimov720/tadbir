@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moliya Daftar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: balance and totals on top; entry form beside two charts; income and expense lists side by side below. */
+:root{
+  --bg:#F9F9F7; --surface:#FCFCFB; --ink:#0B0B0B; --ink2:#52514E; --line:rgba(11,11,11,.10);
+  --grid:#E1E0D9; --axis:#C3C2B7; --s1:#2A78D6; --s2:#EB6834;
+  --btn:#2A78D6; --btn-ink:#FFFFFF; --bad:#B42318; --good:#006300; --soft:#EFEEEA;
+  --font:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D0D0D; --surface:#1A1A19; --ink:#F0EFEC; --ink2:#C3C2B7; --line:rgba(255,255,255,.10);
+    --grid:#2C2C2A; --axis:#383835; --s1:#3987E5; --s2:#D95926; --bad:#FF8A7A; --good:#0CA30C; --soft:#242423; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D0D0D; --surface:#1A1A19; --ink:#F0EFEC; --ink2:#C3C2B7; --line:rgba(255,255,255,.10);
+  --grid:#2C2C2A; --axis:#383835; --s1:#3987E5; --s2:#D95926; --bad:#FF8A7A; --good:#0CA30C; --soft:#242423; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:16px}
+h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
+h1{font-size:22px;font-weight:650}
+h2{font-size:16px;font-weight:600}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:18px 2px;flex-wrap:wrap}
+.sub{color:var(--ink2);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+
+.totals{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-width:0}
+.tile .lbl{color:var(--ink2);font-size:13.5px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.tile .val{font-size:26px;font-weight:650;margin-top:4px;overflow-wrap:anywhere}
+.tile.hero .val{font-size:clamp(30px,5vw,44px);letter-spacing:-.01em}
+.state{font-size:13.5px;margin-top:2px;font-weight:500}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+
+.grid{display:grid;grid-template-columns:minmax(0,330px) minmax(0,1fr);gap:16px;align-items:start}
+.stack{display:grid;gap:16px;min-width:0}
+form{display:grid;gap:12px}
+label{display:grid;gap:5px;font-size:13.5px;font-weight:500}
+.field{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%;min-width:0}
+.field:focus{border-color:var(--s1)}
+.field.bad{border-color:var(--bad)}
+.err{color:var(--bad);font-size:13px;font-weight:400}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--soft);padding:3px;border-radius:10px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{display:block;text-align:center;padding:8px;border-radius:8px;font-weight:500;cursor:pointer;color:var(--ink2)}
+.seg input:checked + label{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.seg input:focus-visible + label{outline:2px solid var(--s1)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 14px;font-weight:500}
+.btn:hover{border-color:var(--s1)}
+.btn.primary{background:var(--btn);border-color:var(--btn);color:var(--btn-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:5px 10px;font-size:13px}
+
+.chead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.legend{display:flex;gap:14px;font-size:13.5px;color:var(--ink2)}
+.legend span{display:flex;align-items:center;gap:6px}
+#mchart{position:relative;width:100%}
+#mchart svg{display:block}
+.tip{position:absolute;top:4px;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.45;white-space:nowrap;z-index:2}
+.tip b{display:block;margin-bottom:2px}
+.ax{fill:var(--ink2);font-size:12px}
+.gl{stroke:var(--grid);stroke-width:1}
+.bl{stroke:var(--axis);stroke-width:1}
+.b1{fill:var(--s1)} .b2{fill:var(--s2)}
+.hit{fill:transparent}
+.hov{fill:var(--ink);opacity:.06}
+details{margin-top:10px;font-size:13.5px;color:var(--ink2)}
+summary{cursor:pointer;width:fit-content}
+.tw{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--ink)}
+
+.cats{display:grid;gap:6px}
+.cat{all:unset;cursor:pointer;display:grid;gap:4px;padding:8px 10px;border-radius:9px;border:1px solid transparent}
+.cat:hover{background:var(--soft)}
+.cat:focus-visible{outline:2px solid var(--s1)}
+.cat[aria-pressed="true"]{border-color:var(--s1);background:var(--soft)}
+.cats.has .cat[aria-pressed="false"]{opacity:.6}
+.cat .r{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.cat .r span:last-child{color:var(--ink2);font-variant-numeric:tabular-nums;text-align:right}
+.track{height:10px;background:var(--soft);border-radius:0 4px 4px 0}
+.cat[aria-pressed="true"] .track,.cats .track{background:var(--grid)}
+.fill{height:100%;background:var(--s1);border-radius:0 4px 4px 0;min-width:2px}
+
+.lists{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.lh .field{width:auto;padding:6px 10px;font-size:14px}
+.sum{color:var(--ink2);font-size:13.5px;margin-bottom:6px}
+.ul{display:grid;max-height:440px;overflow-y:auto;margin:0;padding:0;list-style:none}
+.ul li{display:grid;grid-template-columns:1fr auto auto;gap:2px 10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.ul .what{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.ul .when{grid-column:1;color:var(--ink2);font-size:13px}
+.ul .amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.ul .del{grid-column:3;grid-row:1/3;align-self:center}
+.ul .amt{grid-column:2;grid-row:1/3}
+.badge{font-size:11.5px;border:1px solid var(--line);color:var(--ink2);border-radius:5px;padding:0 6px;margin-left:6px;font-weight:400}
+.empty{color:var(--ink2);padding:22px 8px;text-align:center;border:1px dashed var(--line);border-radius:10px;font-size:14px}
+.foot{color:var(--ink2);font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:30;font-size:14px}
+@media (max-width:860px){
+  .grid,.lists{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .totals{grid-template-columns:1fr}
+  .card{padding:14px}
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Moliya Daftar</h1>
+      <div class="sub">Daromad va xarajatlaringizni yozib boring, balans va tahlilni bir joyda ko‘ring.</div>
+    </div>
+  </div>
+
+  <section class="totals" aria-label="Umumiy ko‘rsatkichlar">
+    <div class="tile hero"><div class="lbl">Joriy balans</div><div class="val" id="tBal">0 so‘m</div><div class="state" id="tState"></div></div>
+    <div class="tile"><div class="lbl"><i class="dot" style="background:var(--s1)"></i>Umumiy daromad</div><div class="val" id="tIn">0 so‘m</div></div>
+    <div class="tile"><div class="lbl"><i class="dot" style="background:var(--s2)"></i>Umumiy xarajat</div><div class="val" id="tOut">0 so‘m</div></div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="hf">
+      <h2 id="hf" style="margin-bottom:12px">Yangi yozuv</h2>
+      <form id="form" novalidate>
+        <div class="seg" role="radiogroup" aria-label="Operatsiya turi">
+          <input type="radio" name="type" id="tOutR" value="out" checked><label for="tOutR">Xarajat</label>
+          <input type="radio" name="type" id="tInR" value="in"><label for="tInR">Daromad</label>
+        </div>
+        <label for="fAmt">Miqdori (so‘m)
+          <input id="fAmt" class="field" type="number" inputmode="numeric" min="1" step="1" placeholder="Masalan: 150000">
+          <span class="err" id="eAmt"></span></label>
+        <label for="fDate">Sana
+          <input id="fDate" class="field" type="date"><span class="err" id="eDate"></span></label>
+        <label for="fCat">Kategoriya
+          <select id="fCat" class="field"></select></label>
+        <label for="fNote">Izoh (ixtiyoriy)
+          <input id="fNote" class="field" maxlength="60" placeholder="Masalan: bozor"></label>
+        <button type="submit" class="btn primary">Qo‘shish</button>
+      </form>
+    </section>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="hm">
+        <div class="chead"><h2 id="hm">Oylar bo‘yicha daromad va xarajat</h2>
+          <div class="legend"><span><i class="dot" style="background:var(--s1)"></i>Daromad</span><span><i class="dot" style="background:var(--s2)"></i>Xarajat</span></div></div>
+        <div id="mchart"></div>
+        <details><summary>Jadval ko‘rinishi</summary><div class="tw" id="mtable"></div></details>
+      </section>
+      <section class="card" aria-labelledby="hc">
+        <div class="chead"><h2 id="hc">Xarajatlar kategoriyalar bo‘yicha</h2><span class="sub">Bosib ro‘yxatni filtrlang</span></div>
+        <div class="cats" id="cats"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="lists">
+    <section class="card" aria-labelledby="hi">
+      <div class="lh"><h2 id="hi">Daromadlar</h2></div>
+      <div class="sum" id="sumIn"></div>
+      <ul class="ul" id="listIn"></ul>
+    </section>
+    <section class="card" aria-labelledby="ho">
+      <div class="lh"><h2 id="ho">Xarajatlar</h2>
+        <select id="fFilter" class="field" aria-label="Xarajatlarni kategoriya bo‘yicha filtrlash"></select></div>
+      <div class="sum" id="sumOut"></div>
+      <ul class="ul" id="listOut"></ul>
+    </section>
+  </div>
+
+  <div class="foot"><span>Ma’lumotlar faqat shu brauzerning LocalStorage xotirasida saqlanadi.</span>
+    <button type="button" class="btn sm" id="clearDemo" hidden>Namunaviy yozuvlarni o‘chirish</button></div>
+</div>
+
+<script>
+const CATS={in:["Maosh","Qo‘shimcha ish","Sovg‘a","Boshqa daromad"],
+            out:["Oziq-ovqat","Uy-joy","Kommunal","Transport","Sog‘liq","Ta’lim","Ko‘ngilochar","Kiyim","Boshqa xarajat"]};
+const MON=["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"];
+const MONF=["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
+const KEY="moliya_ops", SEED="moliya_seeded";
+const mem={};
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return mem[k]??d}}
+function save(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=n=>Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g," ");
+const money=n=>num(n)+" so‘m";
+const p2=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+const fdate=s=>s.slice(8,10)+"."+s.slice(5,7)+"."+s.slice(0,4);
+const today=iso(new Date());
+
+function seedDemo(){
+  const now=new Date(), out=[]; let id=1;
+  const add=(type,amount,date,cat,note)=>{if(date<=today)out.push({id:"d"+(id++),type,amount,date,cat,note,demo:true})};
+  const oz=[620000,710000,655000,590000,740000], tr=[260000,310000,285000,240000,295000], ko=[350000,420000,280000,390000,310000];
+  for(let k=4;k>=0;k--){
+    const d=new Date(now.getFullYear(),now.getMonth()-k,1), y=d.getFullYear(), m=p2(d.getMonth()+1), i=4-k;
+    const dt=day=>y+"-"+m+"-"+p2(day);
+    add("in",8500000,dt(5),"Maosh","Oylik maosh");
+    if(i%2===0)add("in",[1200000,900000,1500000][i/2],dt(19),"Qo‘shimcha ish","Loyiha uchun to‘lov");
+    add("out",1500000,dt(3),"Uy-joy","Ijara");
+    add("out",[410000,445000,390000,430000,420000][i],dt(12),"Kommunal","Kommunal to‘lovlar");
+    add("out",oz[i],dt(8),"Oziq-ovqat","Bozor");
+    add("out",Math.round(oz[i]*0.8),dt(21),"Oziq-ovqat","Do‘kon");
+    add("out",tr[i],dt(10),"Transport","Yo‘l kira va benzin");
+    add("out",ko[i],dt(16),"Ko‘ngilochar","Dam olish");
+    if(i%2===1)add("out",[320000,540000][(i-1)/2],dt(23),"Sog‘liq","Dori-darmon");
+    if(i===2||i===4)add("out",[480000,360000][i/2-1],dt(14),"Kiyim","Kiyim xaridi");
+    if(i===1||i===3)add("out",[600000,450000][(i-1)/2],dt(6),"Ta’lim","Kurs to‘lovi");
+  }
+  return out;
+}
+
+let ops=load(KEY,null);
+if(ops===null){ops=load(SEED,false)?[]:seedDemo();save(KEY,ops);save(SEED,true)}
+let filter="Barchasi";
+
+function toast(t){const el=document.createElement("div");el.className="toast";el.setAttribute("role","status");el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),2000)}
+const sum=a=>a.reduce((s,o)=>s+o.amount,0);
+
+function fillCats(){
+  const t=document.querySelector("input[name=type]:checked").value;
+  $("#fCat").innerHTML=CATS[t].map(c=>`<option>${esc(c)}</option>`).join("");
+}
+function fillFilter(){
+  const used=[...new Set(ops.filter(o=>o.type==="out").map(o=>o.cat))];
+  const all=CATS.out.filter(c=>used.includes(c)||c===filter);
+  used.forEach(c=>{if(!all.includes(c))all.push(c)});
+  $("#fFilter").innerHTML=["Barchasi",...all].map(c=>`<option ${c===filter?"selected":""}>${esc(c)}</option>`).join("");
+}
+
+function renderTotals(){
+  const i=sum(ops.filter(o=>o.type==="in")), x=sum(ops.filter(o=>o.type==="out")), b=i-x;
+  $("#tIn").textContent=money(i);$("#tOut").textContent=money(x);
+  $("#tBal").textContent=(b>0?"+":b<0?"−":"")+money(Math.abs(b));
+  $("#tBal").className="val "+(b>0?"pos":b<0?"neg":"");
+  $("#tState").textContent=b>0?"Daromad xarajatdan ko‘p":b<0?"Xarajat daromaddan ko‘p (defitsit)":"Daromad va xarajat teng";
+  $("#tState").className="state "+(b>0?"pos":b<0?"neg":"");
+}
+
+function li(o){
+  return `<li><div class="what">${esc(o.cat)}${o.note?" · "+esc(o.note):""}${o.demo?'<span class="badge">namuna</span>':""}</div>
+  <div class="when">${fdate(o.date)}</div>
+  <div class="amt">${o.type==="in"?"+":"−"}${num(o.amount)}</div>
+  <button type="button" class="btn sm del" data-del="${o.id}" aria-label="O‘chirish: ${esc(o.cat)}, ${fdate(o.date)}">O‘chirish</button></li>`;
+}
+function renderLists(){
+  const sorter=(a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id));
+  const ins=ops.filter(o=>o.type==="in").sort(sorter);
+  const outs=ops.filter(o=>o.type==="out"&&(filter==="Barchasi"||o.cat===filter)).sort(sorter);
+  $("#sumIn").textContent=ins.length?ins.length+" ta yozuv, jami "+money(sum(ins)):"";
+  $("#sumOut").textContent=outs.length?(filter==="Barchasi"?"":filter+": ")+outs.length+" ta yozuv, jami "+money(sum(outs)):"";
+  $("#listIn").innerHTML=ins.length?ins.map(li).join(""):`<div class="empty">Hali daromad kiritilmagan. Formadan “Daromad” turini tanlab qo‘shing.</div>`;
+  $("#listOut").innerHTML=outs.length?outs.map(li).join(""):`<div class="empty">${filter==="Barchasi"?"Hali xarajat kiritilmagan.":"Bu kategoriyada xarajat yo‘q."}</div>`;
+  $("#clearDemo").hidden=!ops.some(o=>o.demo);
+}
+
+function renderCats(){
+  const outs=ops.filter(o=>o.type==="out"), total=sum(outs), g={};
+  outs.forEach(o=>g[o.cat]=(g[o.cat]||0)+o.amount);
+  const rows=Object.entries(g).sort((a,b)=>b[1]-a[1]);
+  const box=$("#cats");
+  if(!rows.length){box.className="cats";box.innerHTML=`<div class="empty">Xarajat qo‘shilgach, kategoriyalar shu yerda ko‘rinadi.</div>`;return}
+  const max=rows[0][1];
+  box.className="cats"+(filter!=="Barchasi"?" has":"");
+  box.innerHTML=rows.map(([c,v])=>`<button type="button" class="cat" data-cat="${esc(c)}" aria-pressed="${c===filter}">
+    <div class="r"><span>${esc(c)}</span><span>${money(v)} · ${Math.round(v/total*100)}%</span></div>
+    <div class="track"><div class="fill" style="width:${v/max*100}%"></div></div></button>`).join("");
+}
+
+function months(){
+  const n=new Date(), r=[];
+  for(let k=5;k>=0;k--){const d=new Date(n.getFullYear(),n.getMonth()-k,1);r.push({y:d.getFullYear(),m:d.getMonth(),key:d.getFullYear()+"-"+p2(d.getMonth()+1)})}
+  r.forEach(x=>{x.in=sum(ops.filter(o=>o.type==="in"&&o.date.startsWith(x.key)));x.out=sum(ops.filter(o=>o.type==="out"&&o.date.startsWith(x.key)))});
+  return r;
+}
+function niceMax(v){const p=Math.pow(10,Math.floor(Math.log10(v)));const n=v/p;const s=[1,2,2.5,4,5,8,10].find(x=>x>=n);return s*p}
+function short(v){if(v>=1e6)return (Math.round(v/1e5)/10).toString().replace(".",",")+" mln";if(v>=1e3)return Math.round(v/1e3)+" ming";return String(v)}
+function barPath(x,y,w,h,r){r=Math.min(r,w/2,h);return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`}
+
+function drawMonthly(){
+  const box=$("#mchart"), ms=months(), W=Math.max(box.clientWidth,260), H=250;
+  const ml=58, mr=8, mt=10, mb=28, iw=W-ml-mr, ih=H-mt-mb;
+  const max=niceMax(Math.max(1,...ms.map(x=>Math.max(x.in,x.out))));
+  const Y=v=>mt+ih*(1-v/max), gw=iw/ms.length, bw=Math.min(26,gw*0.3);
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Oylar bo‘yicha daromad va xarajat ustunli diagrammasi">`;
+  for(let t=0;t<=4;t++){const v=max/4*t,y=Y(v);s+=`<line class="${t?"gl":"bl"}" x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}"/><text class="ax" x="${ml-8}" y="${y+4}" text-anchor="end">${short(v)}</text>`}
+  ms.forEach((x,i)=>{
+    const cx=ml+gw*i+gw/2;
+    s+=`<rect class="hov" data-hov="${i}" x="${ml+gw*i}" y="${mt}" width="${gw}" height="${ih}" rx="6" style="display:none"/>`;
+    if(x.in>0)s+=`<path class="b1" d="${barPath(cx-bw-1,Y(x.in),bw,Y(0)-Y(x.in),4)}"/>`;
+    if(x.out>0)s+=`<path class="b2" d="${barPath(cx+1,Y(x.out),bw,Y(0)-Y(x.out),4)}"/>`;
+    s+=`<text class="ax" x="${cx}" y="${H-8}" text-anchor="middle">${MON[x.m]}</text>`;
+    s+=`<rect class="hit" data-i="${i}" x="${ml+gw*i}" y="${mt}" width="${gw}" height="${ih+mb}"/>`;
+  });
+  s+=`</svg><div class="tip" id="tip" hidden></div>`;
+  box.innerHTML=s;
+  const tip=$("#tip");
+  const show=i=>{
+    const x=ms[i], b=x.in-x.out;
+    tip.innerHTML=`<b>${MONF[x.m]} ${x.y}</b>Daromad: ${money(x.in)}<br>Xarajat: ${money(x.out)}<br>Farqi: ${b<0?"−":b>0?"+":""}${money(Math.abs(b))}`;
+    tip.hidden=false;
+    const tw=tip.offsetWidth, cx=ml+gw*i+gw/2;
+    tip.style.left=Math.max(0,Math.min(W-tw,cx-tw/2))+"px";
+    box.querySelectorAll("[data-hov]").forEach(r=>r.style.display=+r.dataset.hov===i?"":"none");
+  };
+  const hide=()=>{tip.hidden=true;box.querySelectorAll("[data-hov]").forEach(r=>r.style.display="none")};
+  box.querySelectorAll(".hit").forEach(r=>{
+    r.addEventListener("pointerenter",()=>show(+r.dataset.i));
+    r.addEventListener("pointerdown",()=>show(+r.dataset.i));
+  });
+  box.querySelector("svg").addEventListener("pointerleave",hide);
+  $("#mtable").innerHTML=`<table><thead><tr><th>Oy</th><th>Daromad</th><th>Xarajat</th><th>Farqi</th></tr></thead><tbody>`+
+    ms.map(x=>{const b=x.in-x.out;return `<tr><td>${MONF[x.m]} ${x.y}</td><td>${num(x.in)}</td><td>${num(x.out)}</td><td>${b<0?"−":b>0?"+":""}${num(Math.abs(b))}</td></tr>`}).join("")+`</tbody></table>`;
+}
+
+function render(){fillFilter();renderTotals();renderLists();renderCats();drawMonthly()}
+
+document.querySelectorAll("input[name=type]").forEach(r=>r.addEventListener("change",fillCats));
+$("#fFilter").addEventListener("change",e=>{filter=e.target.value;render()});
+$("#form").addEventListener("submit",e=>{
+  e.preventDefault();
+  const type=document.querySelector("input[name=type]:checked").value;
+  const amount=Math.round(Number($("#fAmt").value)), date=$("#fDate").value, cat=$("#fCat").value, note=$("#fNote").value.trim();
+  let bad=false;
+  const chk=(id,eid,msg)=>{$(eid).textContent=msg||"";$(id).classList.toggle("bad",!!msg);if(msg&&!bad){bad=true;$(id).focus()}};
+  chk("#fAmt","#eAmt",!(amount>0)?"Miqdorni 0 dan katta son bilan kiriting.":amount>1e12?"Miqdor juda katta.":"");
+  chk("#fDate","#eDate",!/^\d{4}-\d{2}-\d{2}$/.test(date)?"Sanani tanlang.":"");
+  if(bad)return;
+  ops.push({id:"u"+Date.now(),type,amount,date,cat,note,demo:false});
+  save(KEY,ops);
+  if(type==="out"&&filter!=="Barchasi"&&filter!==cat)filter="Barchasi";
+  $("#fAmt").value="";$("#fNote").value="";
+  render();toast(type==="in"?"Daromad qo‘shildi":"Xarajat qo‘shildi");
+  $("#fAmt").focus();
+});
+document.addEventListener("click",e=>{
+  const d=e.target.closest("[data-del]");
+  if(d){ops=ops.filter(o=>String(o.id)!==d.dataset.del);save(KEY,ops);if(filter!=="Barchasi"&&!ops.some(o=>o.type==="out"&&o.cat===filter))filter="Barchasi";render();toast("Yozuv o‘chirildi");return}
+  const c=e.target.closest(".cat");
+  if(c){filter=filter===c.dataset.cat?"Barchasi":c.dataset.cat;render()}
+});
+$("#clearDemo").addEventListener("click",()=>{ops=ops.filter(o=>!o.demo);save(KEY,ops);filter="Barchasi";render();toast("Namunaviy yozuvlar o‘chirildi")});
+if(window.ResizeObserver){let w=0;new ResizeObserver(()=>{const nw=$("#mchart").clientWidth;if(nw!==w){w=nw;drawMonthly()}}).observe($("#mchart"))}
+
+$("#fDate").value=today;
+fillCats();render();
+</script>
+
+</body>
+</html>
